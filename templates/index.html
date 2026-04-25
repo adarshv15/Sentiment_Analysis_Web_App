@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentiment Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="main-container">
+    <div class="top-header">
+      <h1>🧠 Sentiment Analyzer</h1>
+      <label class="switch">
+        <input type="checkbox" id="themeToggle" />
+        <span class="slider round"></span>
+      </label>
+    </div>
+
+    <div class="input-box neu-box">
+      <form action="/predict" method="POST">
+        <textarea name="review" placeholder="Type your review here..." required></textarea>
+        <br>
+        <button type="submit">Analyze</button>
+      </form>
+    </div>
+
+    {% if review %}
+    <div class="content-row">
+      <div class="left-box neu-box">
+        <p><strong>Review:</strong> {{ review }}</p>
+        <p class="sentiment-output {{ sentiment_class }}">
+          Sentiment: {{ sentiment }}
+        </p>
+        <p><strong>Confidence:</strong> {{ confidence }}%</p>
+        <div class="emoji-bubble">
+          {% if "Positive" in sentiment %}😄
+          {% elif "Negative" in sentiment %}😞
+          {% else %}😐
+          {% endif %}
+        </div>
+      </div>
+      <div class="right-box neu-box">
+        <canvas id="pieChart"></canvas>
+        <canvas id="gaugeChart"></canvas>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    const sentiment = "{{ sentiment }}";
+    const confidence = parseFloat("{{ confidence }}");
+
+    const toggle = document.getElementById("themeToggle");
+    const body = document.body;
+    if (localStorage.getItem("dark-mode") === "enabled") {
+      body.classList.add("dark-mode");
+      toggle.checked = true;
+    }
+
+    toggle.addEventListener("change", () => {
+      body.classList.toggle("dark-mode");
+      localStorage.setItem("dark-mode", body.classList.contains("dark-mode") ? "enabled" : "disabled");
+    });
+
+    // Pie Chart
+    const pieCtx = document.getElementById("pieChart")?.getContext("2d");
+    if (pieCtx && !isNaN(confidence)) {
+      const pieColors = sentiment.includes("Positive") ? ["#2ecc71", "#dcdcdc"]
+                     : sentiment.includes("Negative") ? ["#e74c3c", "#dcdcdc"]
+                     : ["#f39c12", "#dcdcdc"];
+      new Chart(pieCtx, {
+        type: "pie",
+        data: {
+          labels: ["Sentiment", "Other"],
+          datasets: [{
+            data: [confidence, 100 - confidence],
+            backgroundColor: pieColors
+          }]
+        },
+        options: {
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                font: { size: 16 },
+                color: body.classList.contains("dark-mode") ? "#fff" : "#000"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Gauge Chart
+    const gaugeCtx = document.getElementById("gaugeChart")?.getContext("2d");
+    if (gaugeCtx && !isNaN(confidence)) {
+      const gaugeColor = sentiment.includes("Positive") ? "#2ecc71"
+                       : sentiment.includes("Negative") ? "#e74c3c"
+                       : "#f39c12";
+      new Chart(gaugeCtx, {
+        type: "doughnut",
+        data: {
+          datasets: [{
+            data: [confidence, 100 - confidence],
+            backgroundColor: [gaugeColor, "#dcdcdc"]
+          }]
+        },
+        options: {
+          rotation: -90,
+          circumference: 180,
+          cutout: "70%",
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
